@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
 
 type OperatorFunc func(first, second element) []byte
 
@@ -10,12 +14,7 @@ type element struct {
 	precedence int
 	function   *OperatorFunc
 	names      []byte
-}
-
-type node struct {
-	data  element
-	left  *node
-	right *node
+	debug      string
 }
 
 func contains(value byte, array []byte) bool {
@@ -105,18 +104,20 @@ func infixToPostfix(input []byte) []element {
 			})
 		} else if input[index] == ')' {
 			for {
-				if input[index] != ')' {
+				if operators[len(operators)-1].bracket {
 					break
 				}
 				value, operators = pop(operators)
 				postfix = push(postfix, value)
 			}
+			_, operators = pop(operators)
 		} else if input[index] == '{' {
 			index++
 			value = element{
 				operator: false,
 				bracket:  false,
 				function: nil,
+				names:    []byte{},
 			}
 			for {
 				if input[index] == '}' {
@@ -125,9 +126,7 @@ func infixToPostfix(input []byte) []element {
 				value.names = append(value.names, input[index])
 				index++
 			}
-			if len(value.names) > 0 {
-				postfix = push(postfix, value)
-			}
+			postfix = push(postfix, value)
 		} else {
 			for len(operators) > 0 && (getPrecedence(input[index]) <= operators[len(operators)-1].precedence) {
 				value, operators = pop(operators)
@@ -150,18 +149,47 @@ func infixToPostfix(input []byte) []element {
 	return postfix
 }
 
-func createBET(postfix []element) *node {
+func calculate(postfix []element) element {
+	var stack []element
+	var left, right element
 
-	return nil
+	for len(postfix) > 0 {
+		value := postfix[0]
+		postfix = postfix[1:]
+
+		if value.operator {
+			left, stack = pop(stack)
+			right, stack = pop(stack)
+			stack = append(stack, element{
+				operator:   false,
+				bracket:    false,
+				precedence: 0,
+				names:      (*value.function)(right, left),
+			})
+		} else {
+			stack = append(stack, value)
+		}
+	}
+	return stack[0]
 }
 
-func calculate(root node) string {
+func getAnswer(text string) string {
+	postfix := infixToPostfix([]byte(text))
+	answer := calculate(postfix)
 
-	return ""
+	result := strings.Split(string(answer.names), "")
+	sort.Strings(result)
+
+	return "{" + strings.Join(result, "") + "}"
 }
 
 func main() {
-	text := "{ABCD}-{CZ}"
-	postfix := infixToPostfix([]byte(text))
-	fmt.Println(len(postfix))
+	var input string
+	for {
+		_, err := fmt.Scanf("%s", &input)
+		if err != nil {
+			break
+		}
+		fmt.Println(getAnswer(input))
+	}
 }
