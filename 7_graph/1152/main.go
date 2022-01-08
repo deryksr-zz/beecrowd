@@ -2,34 +2,53 @@ package main
 
 import (
 	"fmt"
+	"sort"
 )
 
-type Edge struct {
+type Road struct {
+	Src  int
 	Dest int
 	Cost int
 }
 
-func exists(current int, visited map[int]bool) bool {
-	_, ok := visited[current]
-	return ok
+type Graph []Road
+
+func (g Graph) Len() int {
+	return len(g)
 }
 
-func getMinimalRoads(roads []Edge, founded map[int]bool, discovered map[int]int) {
-	for _, edge := range roads {
-		if edge.Cost != 0 && !exists(edge.Dest, founded) {
-			if value, ok := discovered[edge.Dest]; !ok {
-				discovered[edge.Dest] = edge.Cost
-			} else if value > edge.Cost {
-				discovered[edge.Dest] = edge.Cost
-			}
-		}
-	}
+func (g Graph) Swap(i, j int) {
+	g[i], g[j] = g[j], g[i]
 }
+
+func (g Graph) Less(i, j int) bool {
+	return g[i].Cost < g[j].Cost
+}
+
+func FindParentRoot(dsu []int, value int) int {
+	for dsu[value] != -1 {
+		value = dsu[value]
+	}
+	return value
+}
+
+func hasConnection(dsu []int, first, second int) bool {
+	firstParent := FindParentRoot(dsu, first)
+	secondParent := FindParentRoot(dsu, second)
+	return firstParent == secondParent
+}
+
+func Merge(dsu []int, first, second int) {
+	firstParent := FindParentRoot(dsu, first)
+	secondParent := FindParentRoot(dsu, second)
+	dsu[firstParent] = secondParent
+	discovered++
+}
+
+var discovered int
 
 func main() {
-	var junctions, roads, newCost, newPlace int
-	var src, dest, cost, min int
-	var startSrc, startDest int
+	var junctions, roads int
 
 	for {
 		fmt.Scanf("%d %d", &junctions, &roads)
@@ -37,50 +56,33 @@ func main() {
 			break
 		}
 
-		graph := make(map[int][]Edge)
+		graph := make(Graph, 0)
 		total := 0
-
 		for roads > 0 {
-			fmt.Scanf("%d %d %d", &src, &dest, &cost)
-			graph[src] = append(graph[src], Edge{Dest: dest, Cost: cost})
-			graph[dest] = append(graph[dest], Edge{Dest: src, Cost: cost})
-			if total == 0 || min > cost {
-				min = cost
-				startSrc = src
-				startDest = dest
-			}
-			total += cost
+			temp := Road{}
+			fmt.Scanf("%d %d %d", &temp.Src, &temp.Dest, &temp.Cost)
+			graph = append(graph, temp)
+			total += temp.Cost
 			roads--
-
 		}
 
-		founded := map[int]bool{
-			startSrc:  true,
-			startDest: true,
+		sort.Sort(graph)
+		dsu := make([]int, junctions)
+		for key := range dsu {
+			dsu[key] = -1
 		}
-
-		discovered := make(map[int]int)
-		getMinimalRoads(graph[startDest], founded, discovered)
-		getMinimalRoads(graph[startSrc], founded, discovered)
-
-		for len(founded) < junctions {
-			newPlace = -1
-			newCost = 0
-
-			for key, value := range discovered {
-				if newPlace == -1 || newCost > value {
-					newPlace = key
-					newCost = value
+		saving := 0
+		discovered = 0
+		for _, value := range graph {
+			if !hasConnection(dsu, value.Src, value.Dest) {
+				Merge(dsu, value.Src, value.Dest)
+				saving += value.Cost
+				if discovered == junctions-1 {
+					break
 				}
 			}
-
-			delete(discovered, newPlace)
-			founded[newPlace] = true
-			min += newCost
-			getMinimalRoads(graph[newPlace], founded, discovered)
 		}
-
-		fmt.Println(total - min)
+		fmt.Println(total - saving)
 	}
 
 }
