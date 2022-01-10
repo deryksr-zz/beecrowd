@@ -45,7 +45,12 @@ func createSCC(tarjan []Node, graph map[int][]int, start int) {
 		current := stack[index]
 		paths := graph[current]
 		for _, value := range paths {
+			temp := tarjan[current].LowLink
 			tarjan[current].LowLink = min(tarjan[current].LowLink, tarjan[value].LowLink)
+			if temp != tarjan[current].LowLink {
+				index = -1
+				break
+			}
 		}
 		index++
 	}
