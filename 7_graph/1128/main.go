@@ -24,40 +24,30 @@ type Node struct {
 	Visited bool
 }
 
-func hasConnectionToVisit(neighbors []int, tarjan []Node) bool {
-	for _, value := range neighbors {
-		if tarjan[value].Visited == false {
-			return true
-		}
-	}
-	return false
-}
-
-func continueFill(tarjan []Node, graph map[int][]int, start int) {
+func getSCCFromStart(tarjan []Node, graph map[int][]int, start int) (result []int) {
 	tarjan[start].LowLink = start
 	tarjan[start].Visited = true
 
 	paths := graph[start]
 	for _, value := range paths {
 		if tarjan[value].Visited == false {
-			continueFill(tarjan, graph, value)
+			result = append(result, getSCCFromStart(tarjan, graph, value)...)
 		}
 		tarjan[start].LowLink = min(tarjan[start].LowLink, tarjan[value].LowLink)
 	}
+	return append(result, start)
 }
 
-func getSCCFromStart(tarjan []Node, graph map[int][]int, start int) {
-	tarjan[start].LowLink = start
-	tarjan[start].Visited = true
-
-	paths := graph[start]
-	for _, value := range paths {
-		if tarjan[value].Visited == false {
-			getSCCFromStart(tarjan, graph, value)
-		} else if hasConnectionToVisit(graph[value], tarjan) {
-			continueFill(tarjan, graph, value)
+func createSCC(tarjan []Node, graph map[int][]int, start int) {
+	stack := getSCCFromStart(tarjan, graph, start)
+	index := len(stack) - 1
+	for index >= 0 {
+		current := stack[index]
+		paths := graph[current]
+		for _, value := range paths {
+			tarjan[current].LowLink = min(tarjan[current].LowLink, tarjan[value].LowLink)
 		}
-		tarjan[start].LowLink = min(tarjan[start].LowLink, tarjan[value].LowLink)
+		index--
 	}
 }
 
@@ -85,7 +75,7 @@ func main() {
 			streets--
 		}
 
-		getSCCFromStart(tarjan, graph, 0)
+		createSCC(tarjan, graph, 0)
 		result := 1
 		for _, value := range tarjan {
 			if value.LowLink == -1 || value.LowLink != 0 {
